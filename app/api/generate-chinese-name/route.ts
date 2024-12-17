@@ -18,34 +18,27 @@ export async function POST(req: Request) {
       throw new Error("No response from OpenRouter");
     }
 
-    // 清理特殊字符和替换中文引号
-    response = response
-      .replace(/[\u0000-\u0019]+/g, "")
-      .replace(/[「」]/g, '"')  // 替换中文引号为英文引号
-      .replace(/\n/g, "")
-      .replace(/\r/g, "")
-      .replace(/\t/g, "")
-      .replace(/\s+/g, " ")
-      .trim();
-    
-    try {
-      const parsedResponse = JSON.parse(response);
-      console.log("Parsed Response:", parsedResponse);
-      return NextResponse.json(parsedResponse);
-    } catch (parseError) {
-      console.error("JSON Parse Error:", parseError);
-      console.error("Failed to parse response:", response);
-      
-      // 如果还是解析失败，尝试更激进的清理
-      response = response
-        .replace(/[^\x20-\x7E]/g, '"') // 替换所有非ASCII字符为英文引号
-        .replace(/""+/g, '"')          // 清理重复的引号
-        .replace(/"{/g, '{')           // 修复对象开始
-        .replace(/}"/g, '}');          // 修复对象结束
-      
-      const parsedResponse = JSON.parse(response);
-      return NextResponse.json(parsedResponse);
+    // 使用正则表达式直接提取引号中的内容
+    const namesMatch = response.match(/"names"\s*:\s*\[(.*?)\]/s);
+    if (!namesMatch) {
+      throw new Error("Invalid response format");
     }
+
+    const nameObjects = namesMatch[1].match(/{([^}]+)}/g).map(nameStr => {
+      const name = nameStr.match(/"name"\s*:\s*"([^"]+)"/)?.[1] || '';
+      const meaning = nameStr.match(/"meaning"\s*:\s*"([^"]+)"/)?.[1] || '';
+      const cultural_notes = nameStr.match(/"cultural_notes"\s*:\s*"([^"]+)"/)?.[1] || '';
+      const score = nameStr.match(/"score"\s*:\s*(\d+)/)?.[1] || '0';
+
+      return {
+        name,
+        meaning,
+        cultural_notes,
+        score: parseInt(score)
+      };
+    });
+
+    return NextResponse.json({ names: nameObjects });
   } catch (error) {
     console.error("Error generating names:", error);
     if (error instanceof Error) {
