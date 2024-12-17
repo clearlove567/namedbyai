@@ -18,8 +18,15 @@ export async function POST(req: Request) {
       throw new Error("No response from OpenRouter");
     }
 
-    // 清理可能存在的特殊字符
-    response = response.replace(/[\u0000-\u0019]+/g, "");
+    // 清理特殊字符和替换中文引号
+    response = response
+      .replace(/[\u0000-\u0019]+/g, "")
+      .replace(/[「」]/g, '"')  // 替换中文引号为英文引号
+      .replace(/\n/g, "")
+      .replace(/\r/g, "")
+      .replace(/\t/g, "")
+      .replace(/\s+/g, " ")
+      .trim();
     
     try {
       const parsedResponse = JSON.parse(response);
@@ -27,12 +34,14 @@ export async function POST(req: Request) {
       return NextResponse.json(parsedResponse);
     } catch (parseError) {
       console.error("JSON Parse Error:", parseError);
-      // 尝试修复常见的 JSON 格式问题
-      response = response.replace(/\n/g, "")
-                        .replace(/\r/g, "")
-                        .replace(/\t/g, "")
-                        .replace(/\s+/g, " ")
-                        .trim();
+      console.error("Failed to parse response:", response);
+      
+      // 如果还是解析失败，尝试更激进的清理
+      response = response
+        .replace(/[^\x20-\x7E]/g, '"') // 替换所有非ASCII字符为英文引号
+        .replace(/""+/g, '"')          // 清理重复的引号
+        .replace(/"{/g, '{')           // 修复对象开始
+        .replace(/}"/g, '}');          // 修复对象结束
       
       const parsedResponse = JSON.parse(response);
       return NextResponse.json(parsedResponse);
