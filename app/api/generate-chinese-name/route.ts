@@ -2,6 +2,17 @@ import { NextResponse } from "next/server";
 import { callOpenRouter } from "@/lib/utils/openai";
 import { generateChineseNamePrompt } from "@/lib/prompts/chineseNamePrompt";
 
+interface NameResponse {
+  name: string;
+  meaning: string;
+  cultural_notes: string;
+  score: number;
+}
+
+interface ParsedResponse {
+  names: NameResponse[];
+}
+
 export async function POST(req: Request) {
   try {
     const body = await req.json();
@@ -24,13 +35,13 @@ export async function POST(req: Request) {
                       .trim();
 
     try {
-      const parsedResponse = JSON.parse(response);
+      const parsedResponse = JSON.parse(response) as ParsedResponse;
       
       if (!parsedResponse.names || !Array.isArray(parsedResponse.names)) {
         throw new Error("Invalid response structure");
       }
 
-      const names = parsedResponse.names.map(name => ({
+      const names = parsedResponse.names.map((name: NameResponse) => ({
         name: String(name.name || ''),
         meaning: String(name.meaning || ''),
         cultural_notes: String(name.cultural_notes || ''),
@@ -38,9 +49,10 @@ export async function POST(req: Request) {
       }));
 
       return NextResponse.json({ names });
-    } catch (parseError) {
+    } catch (parseError: any) {
       console.error("Parse error:", parseError, "Response:", response);
-      throw new Error(`Failed to parse response: ${parseError.message}`);
+      const errorMessage = parseError?.message || 'Unknown parsing error';
+      throw new Error(`Failed to parse response: ${errorMessage}`);
     }
   } catch (error) {
     console.error("Error generating names:", error);
