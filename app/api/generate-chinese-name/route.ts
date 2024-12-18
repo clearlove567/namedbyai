@@ -24,7 +24,7 @@ export async function POST(req: Request) {
       throw new Error("Invalid response format");
     }
 
-    const nameObjects = namesMatch[1].match(/{([^}]+)}/g).map(nameStr => {
+    const nameObjects = namesMatch[1].match(/{([^}]+)}/g)?.map((nameStr: string) => {
       const name = nameStr.match(/"name"\s*:\s*"([^"]+)"/)?.[1] || '';
       const meaning = nameStr.match(/"meaning"\s*:\s*"([^"]+)"/)?.[1] || '';
       const cultural_notes = nameStr.match(/"cultural_notes"\s*:\s*"([^"]+)"/)?.[1] || '';
@@ -36,7 +36,7 @@ export async function POST(req: Request) {
         cultural_notes,
         score: parseInt(score)
       };
-    });
+    }) || [];
 
     return NextResponse.json({ names: nameObjects });
   } catch (error) {
