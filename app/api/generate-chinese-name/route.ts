@@ -10,43 +10,40 @@ export async function POST(req: Request) {
     const completion = await callOpenRouter([
       { role: "user", content: prompt }
     ]);
-
-    console.log("OpenRouter API Response:", completion);
     
     let response = completion.choices?.[0]?.message?.content;
     if (!response) {
       throw new Error("No response from OpenRouter");
     }
 
-    // 使用正则表达式直接提取引号中的内容
-    const namesMatch = response.match(/"names"\s*:\s*\[(.*?)\]/s);
-    if (!namesMatch) {
-      throw new Error("Invalid response format");
+    // 清理响应内容中的特殊字符
+    response = response.replace(/[\u0000-\u001F]+/g, '')
+                      .replace(/\n/g, '')
+                      .replace(/\r/g, '')
+                      .replace(/\t/g, '')
+                      .trim();
+
+    try {
+      const parsedResponse = JSON.parse(response);
+      
+      if (!parsedResponse.names || !Array.isArray(parsedResponse.names)) {
+        throw new Error("Invalid response structure");
+      }
+
+      const names = parsedResponse.names.map(name => ({
+        name: String(name.name || ''),
+        meaning: String(name.meaning || ''),
+        cultural_notes: String(name.cultural_notes || ''),
+        score: Number(name.score) || 0
+      }));
+
+      return NextResponse.json({ names });
+    } catch (parseError) {
+      console.error("Parse error:", parseError, "Response:", response);
+      throw new Error(`Failed to parse response: ${parseError.message}`);
     }
-
-    const nameObjects = namesMatch[1].match(/{([^}]+)}/g)?.map((nameStr: string) => {
-      const name = nameStr.match(/"name"\s*:\s*"([^"]+)"/)?.[1] || '';
-      const meaning = nameStr.match(/"meaning"\s*:\s*"([^"]+)"/)?.[1] || '';
-      const cultural_notes = nameStr.match(/"cultural_notes"\s*:\s*"([^"]+)"/)?.[1] || '';
-      const score = nameStr.match(/"score"\s*:\s*(\d+)/)?.[1] || '0';
-
-      return {
-        name,
-        meaning,
-        cultural_notes,
-        score: parseInt(score)
-      };
-    }) || [];
-
-    return NextResponse.json({ names: nameObjects });
   } catch (error) {
     console.error("Error generating names:", error);
-    if (error instanceof Error) {
-      console.error("Error details:", {
-        message: error.message,
-        stack: error.stack
-      });
-    }
     return NextResponse.json(
       { error: "Failed to generate names" },
       { status: 500 }

@@ -3,15 +3,20 @@ export async function callOpenRouter(messages: any[]) {
   const response = await fetch("https://openrouter.ai/api/v1/chat/completions", {
     method: "POST",
     headers: {
-      "Content-Type": "application/json",
       "Authorization": `Bearer ${process.env.OPENROUTER_API_KEY}`,
       "HTTP-Referer": "https://namedbyai.online",
-      "X-Title": "NamedByAI"
+      "X-Title": "NamedByAI",
+      "Content-Type": "application/json"
     },
     body: JSON.stringify({
       model: "anthropic/claude-3.5-sonnet",
-      messages: messages,
-      temperature: 0.7
+      messages: messages.map(msg => ({
+        role: msg.role,
+        content: msg.content
+      })),
+      response_format: { type: "json_object" },
+      temperature: 0.7,
+      max_tokens: 2000
     })
   });
 
@@ -20,5 +25,6 @@ export async function callOpenRouter(messages: any[]) {
     throw new Error(`OpenRouter API error: ${JSON.stringify(errorData)}`);
   }
 
-  return response.json();
+  const data = await response.json();
+  return data;
 }
