@@ -7,47 +7,36 @@ export function generateEnglishNamePrompt({
   firstLetter,
   chineseName
 }: EnglishNameParams) {
-  const basePrompt = `As a professional name consultant, please generate English names with the following criteria:
+  const basePrompt = `As a professional name consultant, please generate given names (not surnames) strictly in the following JSON format:
 
-Background:
-- Gender: ${gender}
-- Style Preference: ${style}
-- Desired Meaning: ${meaning}
-${firstLetter ? `- Preferred First Letter: ${firstLetter}` : ''}
-${chineseName ? `- Chinese Name Reference: ${chineseName}` : ''}
-
-Requirements:
-1. Generate 3 unique name suggestions
-2. Each name should consider:
-   - Pronunciation harmony
-   - Cultural appropriateness
-   - Modern relevance
-   - International adaptability
-   
-3. For each name provide:
-   - Complete etymology
-   - Cultural significance
-   - Historical context (if any)
-   - Popularity analysis
-   - Overall score (1-100)
-
-Please return in JSON format as follows:
 {
   "names": [
     {
-      "name": "Full Name",
-      "meaning": "Detailed etymology and meaning",
-      "cultural_notes": "Cultural significance and context",
-      "score": score (1-100)
+      "name": "Given name only",
+      "meaning": "Brief etymology and meaning, using commas between parts",
+      "cultural_notes": "Brief cultural significance and context, using commas between parts",
+      "score": 95
     }
   ]
 }
 
-Additional considerations:
-- Ensure names are easy to pronounce
-- Consider international usage
-- Balance uniqueness with practicality
-- Avoid overly complicated spellings`;
+Requirements:
+- Gender: ${gender}
+- Style: ${style}
+- Desired Meaning: ${meaning}
+${firstLetter ? `- First Letter: ${firstLetter}` : ''}
+${chineseName ? `- Chinese Name Reference: ${chineseName}` : ''}
+
+Please follow these rules:
+1. Generate exactly 3 given names (no surnames)
+2. Each name should be a single word
+3. Use only standard English letters
+4. Keep descriptions concise and clear
+5. Use only English punctuation
+6. Score must be between 1-100
+7. Consider name popularity and modern usage
+8. Ensure easy pronunciation
+9. Focus on meaningful and elegant names`;
 
   return basePrompt;
 }
