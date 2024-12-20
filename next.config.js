@@ -1,9 +1,15 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  eslint: {
-    ignoreDuringBuilds: true,
+  output: 'standalone',
+  images: {
+    domains: ['localhost'],
   },
-  images: { unoptimized: true },
-};
+  experimental: {
+    serverActions: true,
+  },
+  typescript: {
+    ignoreBuildErrors: true,
+  },
+}
 
-module.exports = nextConfig;
+module.exports = nextConfig

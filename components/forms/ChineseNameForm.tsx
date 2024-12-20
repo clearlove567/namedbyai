@@ -25,6 +25,8 @@ import { useState } from "react";
 import { NameResults } from "../results/NameResults";
 import { chineseMeanings } from "@/lib/constants/nameMeanings";
 import { chineseNameStyles } from "@/lib/constants/nameStyles";
+import { useToast } from "@/components/ui/use-toast";
+import { useAuth } from "@/contexts/AuthContext";
 
 const formSchema = z.object({
   lastName: z.string().min(1, "请输入姓氏").max(2, "姓氏最多两个字"),
@@ -38,44 +40,69 @@ const formSchema = z.object({
 export function ChineseNameForm() {
   const [results, setResults] = useState<any>(null);
   const [isLoading, setIsLoading] = useState(false);
+  const { toast } = useToast();
+  const { remainingUsage, updateRemainingUsage } = useAuth();
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
     defaultValues: {
       lastName: "",
       gender: "male",
-      style: "traditional",
-      meaning: "health_longevity",
+      style: chineseNameStyles[0].value,
+      meaning: chineseMeanings[0].value,
       nameLength: "2",
     },
   });
 
   async function onSubmit(values: z.infer<typeof formSchema>) {
+    if (remainingUsage <= 0) {
+      toast({
+        title: "今日使用次数已用完",
+        description: "每天凌晨重置使用次数，请明天再来使用",
+        variant: "destructive",
+      });
+      return;
+    }
+
     try {
       setIsLoading(true);
-      const selectedMeaning = chineseMeanings.find(m => m.value === values.meaning);
-      const meaningDetails = selectedMeaning ? selectedMeaning.description : values.meaning;
+      setResults(null);
 
       const response = await fetch("/api/generate-chinese-name", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          ...values,
-          meaning: meaningDetails,
-        }),
+        body: JSON.stringify(values),
       });
+
       const data = await response.json();
-      
-      if (data.names && Array.isArray(data.names)) {
-        setResults(data.names);
-      } else {
-        console.error("Invalid response format:", data);
-        setResults([]);
+
+      if (!response.ok) {
+        if (response.status === 429) {
+          toast({
+            title: "今日使用次数已用完",
+            description: "每天凌晨重置使用次数，请明天再来使用",
+            variant: "destructive",
+          });
+          setIsLoading(false);
+          return;
+        }
+        throw new Error(data.error || "生成名字时出错");
       }
-    } catch (error) {
-      console.error("Error generating names:", error);
-      setResults([]);
-    } finally {
+
+      if (data.names && data.names.names && Array.isArray(data.names.names)) {
+        setResults(data.names.names);
+        updateRemainingUsage().catch(console.error);
+        setIsLoading(false);
+      } else {
+        throw new Error("返回数据格式错误");
+      }
+    } catch (error: any) {
+      console.error("生成错误:", error);
+      toast({
+        title: "生成失败",
+        description: error.message || "请稍后重试",
+        variant: "destructive",
+      });
       setIsLoading(false);
     }
   }
@@ -214,9 +241,19 @@ export function ChineseNameForm() {
             )}
           />
 
-          <Button type="submit" className="w-full" disabled={isLoading}>
-            {isLoading ? "生成中..." : "生成名字"}
+          <Button 
+            type="submit" 
+            className="w-full" 
+            disabled={isLoading || remainingUsage <= 0}
+          >
+            {isLoading ? "生成中..." : remainingUsage <= 0 ? "今日使用次数已用完" : "生成名字"}
           </Button>
+          
+          {remainingUsage <= 0 && (
+            <p className="text-sm text-red-500 text-center mt-2">
+              今日使用次数已达上限，请明天再来使用
+            </p>
+          )}
         </form>
       </Form>
 

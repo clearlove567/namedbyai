@@ -19,9 +19,11 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { NameResults } from "../results/NameResults";
 import { englishNameStyles, englishMeanings, initialLetters } from "@/lib/constants/nameStyles";
+import { useToast } from "@/components/ui/use-toast";
+import { useAuth } from "@/contexts/AuthContext";
 
 const formSchema = z.object({
   gender: z.string(),
@@ -33,6 +35,8 @@ const formSchema = z.object({
 export function EnglishNameForm() {
   const [results, setResults] = useState<any>(null);
   const [isLoading, setIsLoading] = useState(false);
+  const { toast } = useToast();
+  const { remainingUsage, updateRemainingUsage } = useAuth();
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -45,34 +49,61 @@ export function EnglishNameForm() {
   });
 
   async function onSubmit(values: z.infer<typeof formSchema>) {
+    if (remainingUsage <= 0) {
+      toast({
+        title: "Daily Limit Reached",
+        description: "Please try again tomorrow when the limit resets",
+        variant: "destructive",
+      });
+      return;
+    }
+
     try {
       setIsLoading(true);
-      const selectedMeaning = englishMeanings.find(m => m.value === values.meaning);
-      const meaningDetails = selectedMeaning ? selectedMeaning.label : values.meaning;
+      setResults(null);
 
       const response = await fetch("/api/generate-english-name", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          ...values,
-          meaning: meaningDetails,
-        }),
+        body: JSON.stringify(values),
       });
+
       const data = await response.json();
-      
+
+      if (!response.ok) {
+        if (response.status === 429) {
+          toast({
+            title: "Daily Limit Reached",
+            description: "Please try again tomorrow when the limit resets",
+            variant: "destructive",
+          });
+          setIsLoading(false);
+          return;
+        }
+        throw new Error(data.error || "Error generating names");
+      }
+
       if (data.names && Array.isArray(data.names)) {
         setResults(data.names);
+        updateRemainingUsage().catch(console.error);
+        setIsLoading(false);
       } else {
-        console.error("Invalid response format:", data);
-        setResults([]);
+        throw new Error("Invalid response format");
       }
-    } catch (error) {
-      console.error("Error generating names:", error);
-      setResults([]);
-    } finally {
+    } catch (error: any) {
+      console.error("Generation error:", error);
+      toast({
+        title: "Generation Failed",
+        description: error.message || "Please try again later",
+        variant: "destructive",
+      });
       setIsLoading(false);
     }
   }
+
+  useEffect(() => {
+    console.log("当前 isLoading 状态:", isLoading);
+  }, [isLoading]);
 
   return (
     <div className="max-w-2xl mx-auto">
@@ -185,9 +216,19 @@ export function EnglishNameForm() {
             )}
           />
 
-          <Button type="submit" className="w-full" disabled={isLoading}>
-            {isLoading ? "Generating..." : "Generate Names"}
+          <Button 
+            type="submit" 
+            className="w-full" 
+            disabled={isLoading || remainingUsage <= 0}
+          >
+            {isLoading ? "Generating..." : remainingUsage <= 0 ? "Daily Limit Reached" : "Generate Names"}
           </Button>
+          
+          {remainingUsage <= 0 && (
+            <p className="text-sm text-red-500 text-center mt-2">
+              The daily limit has been reached. Please try again tomorrow when it resets.
+            </p>
+          )}
         </form>
       </Form>
 
