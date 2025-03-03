@@ -93,23 +93,36 @@ export default function Home() {
       </section>
 
       {/* Additional Features */}
-      <section className="max-w-4xl mx-auto mt-16 text-center">
-        <h2 className="text-2xl font-semibold mb-8">Why Choose Us</h2>
-        <div className="grid md:grid-cols-2 gap-8">
-          <div className="bg-white rounded-lg p-6 shadow-md">
-            <h3 className="font-medium mb-3">Smart Analysis</h3>
-            <p className="text-gray-600">
-              Advanced AI technology analyzing millions of names for patterns and meanings
-            </p>
-          </div>
-          <div className="bg-white rounded-lg p-6 shadow-md">
-            <h3 className="font-medium mb-3">Cultural Depth</h3>
-            <p className="text-gray-600">
-              Deep understanding of both Eastern and Western naming traditions
-            </p>
-          </div>
-        </div>
-      </section>
+{/* Additional Features */}
+<section className="max-w-4xl mx-auto mt-16 text-center">
+  <h2 className="text-2xl font-semibold mb-8">Why Choose Us</h2>
+  <div className="grid md:grid-cols-2 gap-8">
+    <div className="bg-white rounded-lg p-6 shadow-md">
+      <h3 className="font-medium mb-3">Smart Analysis</h3>
+      <p className="text-gray-600">
+        Advanced AI technology analyzing millions of names for patterns and meanings
+      </p>
+    </div>
+    <div className="bg-white rounded-lg p-6 shadow-md">
+      <h3 className="font-medium mb-3">Cultural Depth</h3>
+      <p className="text-gray-600">
+        Deep understanding of both Eastern and Western naming traditions
+      </p>
+    </div>
+  </div>
+  {/* External Link */}
+  <div className="mt-8">
+    <a
+      href="https://tasbihcounter.org/"
+      target="_blank"
+      rel="noopener noreferrer"
+      className="text-blue-500 underline"
+    >
+      Visit Tasbih Counter
+    </a>
+  </div>
+</section>
+
     </div>
   );
 }
